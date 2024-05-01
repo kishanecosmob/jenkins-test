@@ -4,7 +4,7 @@ pipeline {
     environment {
         SONAR_TOKEN = credentials('sonartoken')
         NEXUS_CREDENTIALS = credentials('nexuslogin')
-        MAVEN_HOME = tool 'Maven'
+        MAVEN_HOME = tool 'MAVEN3'
     }
     
     stages {
