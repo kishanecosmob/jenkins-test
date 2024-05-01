@@ -1,58 +1,64 @@
 pipeline {
     agent any
-    tools {
-	    maven "MAVEN3"
-	    jdk "OracleJDK8"
-	}
-    stages{
-        stage('Fetch code') {
-          steps{
-              git branch: 'main', url:'https://github.com/kishanecosmob/jenkins-test.git'
-          }  
+    
+    environment {
+        SONAR_TOKEN = credentials('sonartoken')
+        NEXUS_CREDENTIALS = credentials('nexuslogin')
+        MAVEN_HOME = tool 'Maven'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
         }
-
+        
         stage('Build') {
             steps {
-                sh 'mvn clean install -DskipTests'
+                sh 'mvn clean package -DskipTests'
             }
-            post {
-                success {
-                    echo "Now Archiving."
-                    archiveArtifacts artifacts: '**/*.war'
+        }
+        
+        stage('Static Code Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv('SonarQubeServer') {
+                        sh 'mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN'
+                    }
                 }
             }
         }
-        stage('Test'){
+        
+        stage('Deploy to Nexus') {
             steps {
-                sh 'mvn test'
-            }
-
-        }
-
-        stage('Checkstyle Analysis'){
-            steps {
-                sh 'mvn checkstyle:checkstyle'
-            }
-        }
-
-        stage('Sonar Analysis') {
-            environment {
-                scannerHome = tool 'sonar4.7'
-            }
-            steps {
-               withSonarQubeEnv('sonar') {
-                   sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=jenkins-test \
-                   -Dsonar.projectName=jenkins-test \
-                   -Dsonar.projectVersion=1.0 \
-                   -Dsonar.sources=src/ \
-                   -Dsonar.java.binaries= \
-                   -Dsonar.junit.reportsPath=ansible \
-                   -Dsonar.jacoco.reportsPath=ansible/templates \
-                   -Dsonar.java.checkstyle.reportPaths=ansible/templates'''
-              }
+                script {
+                    nexusArtifactUploader(
+                        nexusVersion: 'nexus3',
+                        protocol: 'http',
+                        nexusUrl: 'http://172.16.18.116:8081',
+                        groupId: 'ECOSMOB',
+                        version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
+                        repository: 'jenkins-test',
+                        credentialsId: NEXUS_CREDENTIALS,
+                        artifacts: [
+                        [artifactId: 'jenkinstest',
+                            classifier: '',
+                            file: 'target/vprofile-v2.war',
+                            type: 'war']
+                        ]
+                    )
+                }
             }
         }
-
+    }
+    
+    post {
+        success {
+            echo 'Build and deployment successful!'
+        }
+        failure {
+            echo 'Build or deployment failed!'
+        }
     }
 }
-
