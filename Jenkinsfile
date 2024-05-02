@@ -3,15 +3,15 @@ pipeline {
 	agent any
 /*	
 	tools {
-        maven "maven3"
+        maven "MAVEN3"
     }
 */	
     environment {
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "172.31.40.210:8081"
-        NEXUS_REPOSITORY = "vprofile-release"
-	NEXUS_REPO_ID    = "vprofile-release"
+        NEXUS_URL = "172.16.18.116:8081"
+        NEXUS_REPOSITORY = "vprofile-new"
+	NEXUS_REPO_ID    = "vprofile-new"
         NEXUS_CREDENTIAL_ID = "nexuslogin"
         ARTVERSION = "${env.BUILD_ID}"
     }
@@ -56,7 +56,7 @@ pipeline {
         stage('CODE ANALYSIS with SONARQUBE') {
           
 		  environment {
-             scannerHome = tool 'sonarscanner4'
+             scannerHome = tool 'sonar4.7'
           }
 
           steps {
